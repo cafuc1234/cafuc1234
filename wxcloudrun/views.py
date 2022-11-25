@@ -1,17 +1,91 @@
-from rf import login
-from django.http import HttpResponse
 import json
-data={
-    "code":"500",
-    "msg":"登录失败"
-}
-data1={'学号': '20190813129', '姓名': '苏小叁', '姓名拼音': 'Su Xiaosan', '曾用名': '', '英文姓名': '', '性别': '男', '证件类型': '居民身份证', '证件号码': '511923200007127276', '出生日期': '2000-07-12', '民族': '汉族', '政治面貌加入时间': '', '政治面貌': '中国共产主义青年团团员', '入学日期': '', '籍贯': '四川省巴中市平昌县马鞍乡', '户口所在地': '四川省巴中市平昌县马鞍乡', '生源地': '四川省平昌县', '出生地': '四川省平昌县马鞍乡', '血型名称': '', '港澳台侨外': '', '国籍/地区': '', '学生类型': '', '年级': '2019', '学院名称': '航空电子电气学院', '系名称': '', '专业名称': '电子信息工程(080701)', '专业方向': '', '班级名称': '电子1904', '学制': '4', '学籍状态': '在读', '是否在校': '是', '报到注册状态': '已报到已注册', '报到注册备注': '', '撤销报到注册原因': '', '报到时间': '', '注册时间': '', '未报到原因': '', '未注册原因': '', '学历层次': '本科', '培养方式': '', '培养层次': '本科', '学生类别': '', '招生季度': '', '所属学院': '', '招生专业': '', '招生年度': '2019', '考生号': '19511502161526', '毕业中学': '四川省平昌中学', '监护人1姓名': '', '学生证号': '', '银行名称': '', '银行卡号': '', '身高': '', '体重': '', '特长': '擅长逻辑思维 喜欢自然科学。', '入学总分': '582', '来源省': '四川省', '委培地区': '', '高考语文成绩': '87', '高考数学成绩': '130', '培养模式': '', '高考英语成绩': '108', '高考政治成绩': '', '高考历史成绩': '', '高考地理成绩': '', '高考文综成绩': '0', '高考物理成绩': '', '高考生物成绩': '', '高考化学成绩': '', '高考理综成绩': '257', '电子邮箱': '287728492@qq.com', '手机号码': '18828566500', '家庭地址': '四川省平昌中学', '通讯地址': '', 'QQ号码': '2877284962'}
-def index(requests):
-    print(requests)
-    #res=login(requests.POST.get("username"),requests.POST.get("password"))
-    #if(res==False):
-        #return HttpResponse(json.dumps(data))
-    res=json.dumps(data1)
-    print(res)
-    return HttpResponse(res)
+import logging
 
+from django.http import JsonResponse
+from django.shortcuts import render
+from wxcloudrun.models import Counters
+
+
+logger = logging.getLogger('log')
+
+
+def index(request, _):
+    """
+    获取主页
+
+     `` request `` 请求对象
+    """
+
+    return render(request, 'index.html')
+
+
+def counter(request, _):
+    """
+    获取当前计数
+
+     `` request `` 请求对象
+    """
+
+    rsp = JsonResponse({'code': 0, 'errorMsg': ''}, json_dumps_params={'ensure_ascii': False})
+    if request.method == 'GET' or request.method == 'get':
+        rsp = get_count()
+    elif request.method == 'POST' or request.method == 'post':
+        rsp = update_count(request)
+    else:
+        rsp = JsonResponse({'code': -1, 'errorMsg': '请求方式错误'},
+                            json_dumps_params={'ensure_ascii': False})
+    logger.info('response result: {}'.format(rsp.content.decode('utf-8')))
+    return rsp
+
+
+def get_count():
+    """
+    获取当前计数
+    """
+
+    try:
+        data = Counters.objects.get(id=1)
+    except Counters.DoesNotExist:
+        return JsonResponse({'code': 0, 'data': 0},
+                    json_dumps_params={'ensure_ascii': False})
+    return JsonResponse({'code': 0, 'data': data.count},
+                        json_dumps_params={'ensure_ascii': False})
+
+
+def update_count(request):
+    """
+    更新计数，自增或者清零
+
+    `` request `` 请求对象
+    """
+
+    logger.info('update_count req: {}'.format(request.body))
+
+    body_unicode = request.body.decode('utf-8')
+    body = json.loads(body_unicode)
+
+    if 'action' not in body:
+        return JsonResponse({'code': -1, 'errorMsg': '缺少action参数'},
+                            json_dumps_params={'ensure_ascii': False})
+
+    if body['action'] == 'inc':
+        try:
+            data = Counters.objects.get(id=1)
+        except Counters.DoesNotExist:
+            data = Counters()
+        data.id = 1
+        data.count += 1
+        data.save()
+        return JsonResponse({'code': 0, "data": data.count},
+                    json_dumps_params={'ensure_ascii': False})
+    elif body['action'] == 'clear':
+        try:
+            data = Counters.objects.get(id=1)
+            data.delete()
+        except Counters.DoesNotExist:
+            logger.info('record not exist')
+        return JsonResponse({'code': 0, 'data': 0},
+                    json_dumps_params={'ensure_ascii': False})
+    else:
+        return JsonResponse({'code': -1, 'errorMsg': 'action参数错误'},
+                    json_dumps_params={'ensure_ascii': False})

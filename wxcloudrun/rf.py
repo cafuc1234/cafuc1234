@@ -2,7 +2,7 @@ import time
 print(int(time.time()*1000))
 import requests
 from bs4 import BeautifulSoup
-from yy import parser
+from wxcloudrun import yy
 import random
 from Crypto.Cipher import  AES
 import base64
@@ -208,7 +208,7 @@ def login(username,password):
     }
     person14=requests.get("https://211-83-131-132.vpn.cafuc.edu.cn:8118/xsxxxggl/xsgrxxwh_cxXsgrxx.html?gnmkdm=N100801&layout=default&su="+data["username"],headers=headers14,allow_redirects=False,verify=False)
 
-    information=parser(person14.text)
+    information=yy.parser(person14.text)
 
     return information
     # r=BeautifulSoup(person14.text,'lxml')
